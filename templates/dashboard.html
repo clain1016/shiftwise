@@ -16,6 +16,7 @@
 <h2>This week's shifts</h2>
 {% if session.role == 'employee' %}
 <form method="post" action="{{ url_for('pick') }}">
+<div class="table-wrap">
 <table>
   <tr><th>Day</th><th>Time</th><th>Staffed</th><th>Status / your pick</th><th>Your rank</th></tr>
   {% for s in shifts %}
@@ -37,6 +38,9 @@
         {% elif st == 'swap_requested' %}
           <span class="tag warn">swap requested</span>
           <span class="muted">a coverer was assigned automatically</span>
+        {% elif st == 'manager_fixed' %}
+          <span class="tag warn">manager-set</span>
+          <span class="muted">placed by the manager — talk to them to change it</span>
         {% else %}
           <span class="tag ok">scheduled</span>
           <button class="btn sm ghost" formaction="{{ url_for('swap', shift_id=s.id) }}" formmethod="post">Request swap</button>
@@ -55,6 +59,7 @@
   </tr>
   {% endfor %}
 </table>
+</div>
 <p><button class="btn">Save my picks</button>
 <span class="muted">Rank <strong>every day 1–{{ shifts|length }}</strong> (1 = top choice, no repeats). Even days you don't want — those ranks are your backup plan, so any shift you leave can be covered and you can be called in if others fall through. Shifts are assigned automatically by seniority and full-time priority.</span>
 </p>

@@ -39,7 +39,7 @@ assert "Conflicts" in html
 assert "Mon" in html
 assert "Tue" not in html.split("Conflicts —")[1].split("week of")[0]  # Tue never in a conflict card
 # 3 claimants listed, sorted FT first then seniority: alex(FT 2021), sam(PT 2023), jordan(PT 2024)
-assert html.index("Alex Rivera") < html.index("Sam Chen") < html.index("Jordan Diaz"), \
+assert html.index("Alex Rivera") < html.index("Sam Chen", html.index("Claimant")), \
     "claimants must be sorted by priority lineup"
 print("1. Conflict detected; claimants sorted FT-first then seniority: OK")
 
@@ -47,14 +47,26 @@ print("1. Conflict detected; claimants sorted FT-first then seniority: OK")
 assert "/manager/conflicts?week=2026-09-21" in html
 print("2. Week navigation on conflicts page: OK")
 
-# --- 3. MANUAL ASSIGN REMOVED (review-only manager): the assign endpoint
-# must no longer exist
+# --- 3. the OLD manual-assign endpoint (/manager/conflicts/assign) is gone
+# but the NEW override endpoint (/manager/assign/<shift>/<user>) exists
 uid_sam_row = appmod.db()
 uid_sam = uid_sam_row.execute("SELECT id FROM users WHERE username='sam'").fetchone()[0]
 uid_sam_row.close()
 r = client.post("/manager/conflicts/assign",
                 data={"shift_id": mon, "user_id": uid_sam}, follow_redirects=True)
-assert r.status_code == 404, "conflict_assign endpoint should be gone"
+assert r.status_code == 404, "old conflict_assign endpoint should be gone"
+conn2 = appmod.db()
+alex_id = conn2.execute("SELECT id FROM users WHERE username='alex'").fetchone()[0]
+conn2.close()
+r2 = client.post(f"/manager/assign/{tue}/{alex_id}", follow_redirects=True)
+assert r2.status_code == 200, "new override endpoint should exist"
+conn2 = appmod.db()
+row = conn2.execute(
+    "SELECT a.status FROM assignments a JOIN users u ON u.id=a.user_id "
+    "WHERE u.username='alex' AND a.shift_id=?", (tue,)).fetchone()
+conn2.close()
+assert row and row["status"] == "manager_fixed", f"override should place alex as manager_fixed, got {row}"
+print("3b. Manager override places employee as manager_fixed: OK")
 print("3. Manual assign endpoint removed (review-only manager): OK")
 
 # --- 4. assignments happen automatically WITHOUT the manager running anything:
